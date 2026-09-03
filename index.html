@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Stool log">
+<meta name="theme-color" content="#E8EAE7">
+<meta name="color-scheme" content="light">
+<title>Stool and symptom log</title>
+<style>
+  :root {
+    --ground: #E8EAE7;
+    --surface: #FFFFFF;
+    --ink: #1B211F;
+    --muted: #5D6663;
+    --hair: #CFD4CE;
+    --accent: #33415C;
+    --accent-ink: #FFFFFF;
+    --warn: #8A5A1E;
+    --danger: #8C3A32;
+  }
+  *, *::before, *::after { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html { background: var(--ground); }
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: ui-sans-serif, -apple-system, system-ui, "Helvetica Neue", sans-serif;
+    font-size: 16px;
+    line-height: 1.45;
+    margin: 0 auto;
+    max-width: 560px;
+    padding: env(safe-area-inset-top) 0 calc(96px + env(safe-area-inset-bottom));
+    -webkit-text-size-adjust: 100%;
+  }
+  .boot { padding: 48px 20px; color: var(--muted); }
+
+  header { padding: 22px 20px 14px; }
+  h1 {
+    font-family: ui-serif, "New York", Charter, Georgia, serif;
+    font-size: 26px; line-height: 1.15; font-weight: 600;
+    margin: 0 0 4px; letter-spacing: -0.01em;
+  }
+  header p { margin: 0; color: var(--muted); font-size: 14px; }
+
+  nav { display: flex; gap: 2px; padding: 0 20px; border-bottom: 1px solid var(--hair); }
+  nav button {
+    flex: 1; background: none; border: none; border-bottom: 2px solid transparent;
+    padding: 10px 4px 9px; font: inherit; font-size: 15px; color: var(--muted);
+    cursor: pointer; margin-bottom: -1px;
+  }
+  nav button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); font-weight: 600; }
+
+  section.panel { padding: 4px 20px 0; }
+  .field { padding: 18px 0; border-bottom: 1px solid var(--hair); }
+  .field:last-child { border-bottom: none; }
+
+  .label { font-family: ui-serif, "New York", Charter, Georgia, serif; font-size: 17px; font-weight: 600; margin: 0 0 2px; }
+  .hint { font-size: 13px; color: var(--muted); margin: 0 0 12px; }
+
+  .swatches { display: flex; gap: 8px; }
+  .swatch {
+    flex: 1; border: 1px solid var(--hair); background: var(--surface);
+    border-radius: 10px; padding: 8px 4px 7px; cursor: pointer; font: inherit; text-align: center;
+  }
+  .swatch .chip { display: block; height: 40px; border-radius: 6px; margin-bottom: 6px; border: 1px solid rgba(0,0,0,.12); }
+  .swatch .cap { font-size: 11px; line-height: 1.2; color: var(--muted); display: block; }
+  .swatch[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }
+  .swatch[aria-pressed="true"] .cap { color: var(--ink); font-weight: 600; }
+
+  .pills { display: flex; flex-wrap: wrap; gap: 8px; }
+  .pill {
+    border: 1px solid var(--hair); background: var(--surface); color: var(--ink);
+    border-radius: 999px; padding: 9px 15px; font: inherit; font-size: 15px; cursor: pointer;
+  }
+  .pill[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .pills.numeric .pill { flex: 1; min-width: 0; padding: 10px 0; text-align: center; }
+
+  textarea, input[type="text"], input[type="number"], input[type="datetime-local"], input[type="date"] {
+    width: 100%; font: inherit; font-size: 16px; color: var(--ink);
+    background: var(--surface); border: 1px solid var(--hair); border-radius: 10px; padding: 10px 12px;
+  }
+  textarea { min-height: 64px; resize: vertical; }
+
+  .savebar {
+    position: sticky; bottom: 0;
+    background: linear-gradient(to top, var(--ground) 72%, rgba(232,234,231,0));
+    padding: 14px 20px calc(18px + env(safe-area-inset-bottom));
+    margin-top: 8px;
+  }
+  .save {
+    width: 100%; background: var(--accent); color: var(--accent-ink); border: none;
+    border-radius: 12px; padding: 15px; font: inherit; font-size: 17px; font-weight: 600; cursor: pointer;
+  }
+  .save[disabled] { background: #A9AFB8; cursor: default; }
+
+  .flash {
+    background: var(--surface); border: 1px solid var(--hair); border-left: 3px solid var(--warn);
+    border-radius: 8px; padding: 11px 13px; font-size: 14px; margin: 14px 0 0; color: var(--ink);
+  }
+  .flash strong { font-weight: 600; }
+  .flash.alarm { border-left-color: var(--danger); }
+
+  .banner {
+    margin: 0 20px 4px; background: #FBF3E7; border: 1px solid #E4CFA9;
+    border-radius: 8px; padding: 11px 13px; font-size: 14px;
+  }
+
+  .entry {
+    background: var(--surface); border: 1px solid var(--hair); border-radius: 10px;
+    padding: 12px 14px; margin-bottom: 8px; display: flex; gap: 12px; align-items: flex-start;
+  }
+  .entry .bar { width: 6px; align-self: stretch; border-radius: 3px; flex: none; }
+  .entry .body { flex: 1; min-width: 0; }
+  .entry .when { font-size: 13px; color: var(--muted); }
+  .entry .what { font-weight: 600; }
+  .entry .tags { font-size: 13px; color: var(--muted); }
+  .entry .del { background: none; border: none; color: var(--muted); font: inherit; font-size: 13px; cursor: pointer; padding: 2px 0; }
+
+  .daygroup { margin: 18px 0 6px; }
+  .daygroup h3 { font-family: ui-serif, "New York", Charter, Georgia, serif; font-size: 15px; font-weight: 600; margin: 0 0 8px; color: var(--muted); }
+
+  .stat { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--hair); font-size: 15px; }
+  .stat:last-of-type { border-bottom: none; }
+  .stat span:last-child { font-weight: 600; text-align: right; }
+
+  .empty { color: var(--muted); font-size: 15px; padding: 24px 0; }
+
+  .ghost {
+    background: var(--surface); border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 10px; padding: 12px; font: inherit; font-weight: 600; cursor: pointer; width: 100%;
+  }
+  .ghost.quiet { border-color: var(--hair); color: var(--muted); font-weight: 400; }
+  .ghost.risky { border-color: var(--danger); color: var(--danger); font-weight: 400; }
+  .row { display: flex; gap: 8px; }
+  .row > * { flex: 1; }
+  .stack > * + * { margin-top: 8px; }
+
+  pre.csv {
+    background: var(--surface); border: 1px solid var(--hair); border-radius: 10px;
+    padding: 12px; font-size: 11px; line-height: 1.4; overflow: auto; max-height: 220px;
+    white-space: pre; -webkit-user-select: text; user-select: text;
+  }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+<div id="app"><div class="boot">Loading your log…</div></div>
+<input type="file" id="restorefile" accept="application/json,.json" hidden>
+
+<script>
+(function () {
+  'use strict';
+
+  var KEY = 'stoolLog.v1';
+  var db = { entries: [], weights: [], lastBackup: null };
+  var store = 'local';   // 'local' | 'memory'
+  var tab = 'log';
+  var flash = null;
+  var draft = newDraft();
+
+  var COLOURS = [
+    { id: 'clay',        label: 'Clay / putty', hex: '#C9C3B2', pale: true },
+    { id: 'paleyellow',  label: 'Pale yellow',  hex: '#DFCB86', pale: true },
+    { id: 'yellowbrown', label: 'Yellow-brown', hex: '#AE8639', pale: false },
+    { id: 'brown',       label: 'Normal brown', hex: '#6B4A2B', pale: false },
+    { id: 'dark',        label: 'Dark brown',   hex: '#3A2A1E', pale: false }
+  ];
+  var TEXTURE = ['Floated', 'Greasy or oily', 'Hard to flush', 'Strong smell'];
+  var FAT = ['Low fat', 'Mixed', 'High fat'];
+  var URINE = ['Urine normal', 'Urine dark'];
+  var SYMPTOMS = ['Upper right pain', 'Fever or chills', 'Itching', 'Nausea', 'Bloating', 'Yellow eyes or skin'];
+  var BRISTOL = {
+    1: 'Separate hard lumps', 2: 'Lumpy sausage', 3: 'Cracked sausage', 4: 'Smooth sausage',
+    5: 'Soft blobs', 6: 'Mushy ragged edges', 7: 'Entirely liquid'
+  };
+
+  // ---------- storage ----------
+
+  function canStore() {
+    try {
+      var t = '__t' + Date.now();
+      window.localStorage.setItem(t, '1');
+      window.localStorage.removeItem(t);
+      return true;
+    } catch (e) { return false; }
+  }
+
+  function load() {
+    if (!canStore()) { store = 'memory'; return; }
+    try {
+      var raw = window.localStorage.getItem(KEY);
+      if (raw) db = JSON.parse(raw);
+    } catch (e) { /* corrupt or absent; start fresh */ }
+    if (!db.entries) db.entries = [];
+    if (!db.weights) db.weights = [];
+    if (db.lastBackup === undefined) db.lastBackup = null;
+  }
+
+  function persist() {
+    if (store === 'memory') return;
+    try { window.localStorage.setItem(KEY, JSON.stringify(db)); }
+    catch (e) {
+      store = 'memory';
+      flash = { text: 'This browser stopped saving. Use <strong>Save backup file</strong> in the Report tab before you close this page.' };
+    }
+  }
+
+  function download(filename, text, type) {
+    var blob = new Blob([text], { type: (type || 'text/plain') + ';charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+  }
+
+  // ---------- helpers ----------
+
+  function newDraft() {
+    return { colour: null, bristol: null, texture: [], fat: null, urine: null, symptoms: [], note: '', when: localNow() };
+  }
+  function localNow() {
+    var d = new Date();
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+    return d.toISOString().slice(0, 16);
+  }
+  function today() { return localNow().slice(0, 10); }
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function colourOf(id) {
+    for (var i = 0; i < COLOURS.length; i++) if (COLOURS[i].id === id) return COLOURS[i];
+    return { id: id, label: id, hex: '#999999', pale: false };
+  }
+  function prettyDate(d) {
+    var p = d.split('-');
+    return new Date(+p[0], +p[1] - 1, +p[2]).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+  }
+  function uniqueDays() {
+    var seen = {};
+    db.entries.forEach(function (e) { seen[e.ts.slice(0, 10)] = 1; });
+    return Object.keys(seen).sort();
+  }
+  function daysSince(iso) {
+    if (!iso) return null;
+    return Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+  }
+  function toggle(arr, v) {
+    var i = arr.indexOf(v);
+    if (i > -1) arr.splice(i, 1); else arr.push(v);
+  }
+
+  // ---------- analysis ----------
+
+  function stats() {
+    var total = db.entries.length;
+    var pale = 0, normal = 0, greasy = 0, highFat = 0, greasyHighFat = 0;
+    var paleDays = {}, painDays = {}, darkUrineDays = {}, normalDays = {};
+
+    db.entries.forEach(function (e) {
+      var c = colourOf(e.colour);
+      var day = e.ts.slice(0, 10);
+      if (c.pale) { pale++; paleDays[day] = 1; }
+      if (e.colour === 'brown') { normal++; normalDays[day] = 1; }
+      var tex = e.texture || [];
+      var isGreasy = tex.indexOf('Greasy or oily') > -1 || tex.indexOf('Floated') > -1;
+      if (isGreasy) greasy++;
+      if (e.fat === 'High fat') { highFat++; if (isGreasy) greasyHighFat++; }
+      if ((e.symptoms || []).indexOf('Upper right pain') > -1) painDays[day] = 1;
+      if (e.urine === 'Urine dark') darkUrineDays[day] = 1;
+    });
+
+    var days = uniqueDays();
+    var paleAndPain = 0, paleAndUrine = 0;
+    Object.keys(paleDays).forEach(function (d) {
+      if (painDays[d]) paleAndPain++;
+      if (darkUrineDays[d]) paleAndUrine++;
+    });
+
+    var run = 0, longest = 0;
+    days.forEach(function (d) { if (normalDays[d]) run = 0; else { run++; if (run > longest) longest = run; } });
+
+    var clay = db.entries.filter(function (e) { return e.colour === 'clay'; })
+      .map(function (e) { return e.ts; }).sort();
+
+    return {
+      total: total, days: days.length, pale: pale, normal: normal, greasy: greasy,
+      palePct: total ? Math.round(pale / total * 100) : 0,
+      paleAndPain: paleAndPain, paleAndUrine: paleAndUrine,
+      highFat: highFat, greasyHighFat: greasyHighFat, longestAbnormal: longest,
+      lastClay: clay.length ? clay[clay.length - 1] : null
+    };
+  }
+
+  function csv() {
+    var rows = ['date,time,colour,bristol,texture,meals,urine,symptoms,note'];
+    db.entries.slice().sort(function (a, b) { return a.ts.localeCompare(b.ts); }).forEach(function (e) {
+      rows.push([
+        e.ts.slice(0, 10), e.ts.slice(11, 16), colourOf(e.colour).label, e.bristol || '',
+        (e.texture || []).join('; '), e.fat || '', e.urine || '',
+        (e.symptoms || []).join('; '), e.note || ''
+      ].map(function (v) { return '"' + String(v).replace(/"/g, '""') + '"'; }).join(','));
+    });
+    db.weights.slice().sort(function (a, b) { return a.date.localeCompare(b.date); }).forEach(function (w) {
+      rows.push('"' + w.date + '","","","","","","","","weight: ' + w.value + '"');
+    });
+    return rows.join('\n');
+  }
+
+  function writtenSummary() {
+    if (!db.entries.length) return 'No entries logged yet.';
+    var s = stats(), days = uniqueDays();
+    var out = [];
+    out.push('Stool log, ' + prettyDate(days[0]) + ' to ' + prettyDate(days[days.length - 1]));
+    out.push('');
+    out.push(s.total + (s.total === 1 ? ' bowel movement recorded across ' : ' bowel movements recorded across ') +
+             s.days + (s.days === 1 ? ' day.' : ' days.'));
+    out.push(s.pale + (s.pale === 1 ? ' was' : ' were') + ' clay or pale yellow (' + s.palePct + '%). ' +
+             s.normal + (s.normal === 1 ? ' was' : ' were') + ' normal brown.');
+    out.push(s.greasy + (s.greasy === 1 ? ' floated' : ' floated') + ' or looked greasy.');
+    out.push('Longest run of consecutive days with no normal brown stool: ' + s.longestAbnormal + '.');
+    if (s.highFat) out.push('Of ' + s.highFat + (s.highFat === 1 ? ' entry' : ' entries') + ' following a high-fat meal, ' +
+      s.greasyHighFat + (s.greasyHighFat === 1 ? ' was' : ' were') + ' greasy or floating.');
+    out.push(s.paleAndPain
+      ? 'Pale stool and upper right abdominal pain fell on the same day ' + (s.paleAndPain === 1 ? 'once.' : s.paleAndPain + ' times.')
+      : 'No day recorded pale stool together with upper right abdominal pain.');
+    if (s.paleAndUrine) out.push('Pale stool and dark urine fell on the same day ' + (s.paleAndUrine === 1 ? 'once.' : s.paleAndUrine + ' times.'));
+    if (db.weights.length) {
+      var ws = db.weights.slice().sort(function (a, b) { return a.date.localeCompare(b.date); });
+      out.push('Weight: ' + ws[0].value + ' on ' + prettyDate(ws[0].date) + ' to ' + ws[ws.length - 1].value + ' on ' + prettyDate(ws[ws.length - 1].date) + '.');
+    }
+    out.push('');
+    out.push('Background: stool colour has not returned to normal brown at any point in the past 18 months, alternating between clay-pale and greasy yellow.');
+    out.push('');
+    out.push('Requests: liver function tests (ALP, GGT, split bilirubin) timed to a pale episode rather than to an appointment date; faecal elastase-1; coeliac serology (tTG-IgA with total IgA); consideration of MRCP given the intermittent pattern.');
+    return out.join('\n');
+  }
+
+  function copy(text, what) {
+    function done(ok) {
+      flash = { text: ok ? what + ' copied to your clipboard.' : 'Copy was blocked. Select the text below and copy it by hand, or use the download buttons.' };
+      render();
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { done(true); }, function () { done(false); });
+    } else { done(false); }
+  }
+
+  // ---------- views ----------
+
+  function render() {
+    document.getElementById('app').innerHTML =
+      '<header><h1>Stool and symptom log</h1><p>' + summaryLine() + '</p></header>' +
+      banner() +
+      '<nav role="tablist">' + tabBtn('log', 'Add entry') + tabBtn('history', 'History') + tabBtn('report', 'Report') + '</nav>' +
+      (tab === 'log' ? panelLog() : tab === 'history' ? panelHistory() : panelReport());
+    wire();
+  }
+
+  function summaryLine() {
+    var n = db.entries.length;
+    if (!n) return 'Four weeks of entries gives your gastroenterologist several cycles to read.';
+    var d = uniqueDays().length;
+    return n + (n === 1 ? ' entry' : ' entries') + ' across ' + d + (d === 1 ? ' day' : ' days');
+  }
+
+  function banner() {
+    if (store === 'memory') {
+      return '<div class="banner">This browser will not keep your entries after you close the page. Open the file in Safari or Chrome rather than a preview window, or save a backup file from the Report tab each time.</div>';
+    }
+    var since = daysSince(db.lastBackup);
+    if (db.entries.length >= 8 && (since === null || since >= 7)) {
+      return '<div class="banner">' + (since === null ? 'You have not backed up yet.' : 'Last backup was ' + since + ' days ago.') + ' Clearing your browser data would erase the log. Save a backup file from the Report tab.</div>';
+    }
+    return '';
+  }
+
+  function tabBtn(id, label) {
+    return '<button role="tab" data-tab="' + id + '" aria-selected="' + (tab === id) + '">' + label + '</button>';
+  }
+
+  function panelLog() {
+    var h = '<section class="panel">';
+
+    h += '<div class="field"><p class="label">Colour</p>' +
+      '<p class="hint">Pick the closest match under normal light.</p><div class="swatches">' +
+      COLOURS.map(function (c) {
+        return '<button class="swatch" data-colour="' + c.id + '" aria-pressed="' + (draft.colour === c.id) + '">' +
+          '<span class="chip" style="background:' + c.hex + '"></span><span class="cap">' + c.label + '</span></button>';
+      }).join('') + '</div></div>';
+
+    h += '<div class="field"><p class="label">Texture</p><p class="hint">Tap all that apply.</p><div class="pills">' +
+      TEXTURE.map(function (t) {
+        return '<button class="pill" data-texture="' + esc(t) + '" aria-pressed="' + (draft.texture.indexOf(t) > -1) + '">' + t + '</button>';
+      }).join('') + '</div></div>';
+
+    h += '<div class="field"><p class="label">Bristol scale</p>' +
+      '<p class="hint">' + (draft.bristol ? esc(BRISTOL[draft.bristol]) : '1 is hardest, 7 is liquid.') + '</p><div class="pills numeric">' +
+      [1,2,3,4,5,6,7].map(function (n) {
+        return '<button class="pill" data-bristol="' + n + '" aria-pressed="' + (draft.bristol === n) + '">' + n + '</button>';
+      }).join('') + '</div></div>';
+
+    h += '<div class="field"><p class="label">Meals beforehand</p>' +
+      '<p class="hint">Separates colour that tracks fat intake from colour that does not.</p><div class="pills">' +
+      FAT.map(function (f) {
+        return '<button class="pill" data-fat="' + esc(f) + '" aria-pressed="' + (draft.fat === f) + '">' + f + '</button>';
+      }).join('') + '</div></div>';
+
+    h += '<div class="field"><p class="label">Urine and symptoms</p><p class="hint">Leave blank if none.</p>' +
+      '<div class="pills" style="margin-bottom:8px">' +
+      URINE.map(function (u) {
+        return '<button class="pill" data-urine="' + esc(u) + '" aria-pressed="' + (draft.urine === u) + '">' + u + '</button>';
+      }).join('') + '</div><div class="pills">' +
+      SYMPTOMS.map(function (s) {
+        return '<button class="pill" data-symptom="' + esc(s) + '" aria-pressed="' + (draft.symptoms.indexOf(s) > -1) + '">' + s + '</button>';
+      }).join('') + '</div></div>';
+
+    h += '<div class="field"><p class="label">Time and note</p>' +
+      '<input type="datetime-local" id="when" value="' + esc(draft.when) + '" style="margin-bottom:8px">' +
+      '<textarea id="note" placeholder="Anything else worth recording">' + esc(draft.note) + '</textarea></div>';
+
+    h += '</section><div class="savebar">' +
+      '<button class="save" id="save"' + (draft.colour ? '' : ' disabled') + '>' +
+      (draft.colour ? 'Save entry' : 'Pick a colour to save') + '</button>' +
+      (flash ? '<p class="flash' + (flash.alarm ? ' alarm' : '') + '">' + flash.text + '</p>' : '') + '</div>';
+
+    return h;
+  }
+
+  function panelHistory() {
+    if (!db.entries.length) {
+      return '<section class="panel"><p class="empty">Nothing logged yet. Entries appear here newest first, grouped by day.</p></section>';
+    }
+    var byDay = {};
+    db.entries.slice().sort(function (a, b) { return b.ts.localeCompare(a.ts); }).forEach(function (e) {
+      var d = e.ts.slice(0, 10);
+      (byDay[d] = byDay[d] || []).push(e);
+    });
+    var h = '<section class="panel">';
+    Object.keys(byDay).sort().reverse().forEach(function (d) {
+      h += '<div class="daygroup"><h3>' + prettyDate(d) + '</h3>';
+      byDay[d].forEach(function (e) {
+        var c = colourOf(e.colour);
+        var tags = [].concat(e.texture || [], e.bristol ? ['Bristol ' + e.bristol] : [], e.fat ? [e.fat] : [],
+          e.urine === 'Urine dark' ? ['Urine dark'] : [], e.symptoms || []);
+        h += '<div class="entry"><span class="bar" style="background:' + c.hex + '"></span><span class="body">' +
+          '<span class="when">' + e.ts.slice(11, 16) + '</span><br><span class="what">' + esc(c.label) + '</span>' +
+          (tags.length ? '<br><span class="tags">' + esc(tags.join(' \u00B7 ')) + '</span>' : '') +
+          (e.note ? '<br><span class="tags">' + esc(e.note) + '</span>' : '') +
+          '</span><button class="del" data-del="' + esc(e.id) + '">Delete</button></div>';
+      });
+      h += '</div>';
+    });
+    return h + '</section>';
+  }
+
+  function panelReport() {
+    var h = '<section class="panel">';
+
+    h += '<div class="field"><p class="label">Weight</p>' +
+      '<p class="hint">Add it weekly. A documented trend answers the weight-loss question directly.</p>' +
+      '<div class="row" style="margin-bottom:8px">' +
+      '<input type="number" step="0.1" id="wval" placeholder="Weight" inputmode="decimal">' +
+      '<input type="date" id="wdate" value="' + today() + '"></div>' +
+      '<button class="ghost" id="addweight">Add weight</button>';
+    if (db.weights.length) {
+      h += '<p class="hint" style="margin-top:10px">' +
+        db.weights.slice().sort(function (a, b) { return b.date.localeCompare(a.date); })
+          .map(function (w) { return prettyDate(w.date) + ': ' + esc(w.value); }).join('<br>') + '</p>';
+    }
+    h += '</div>';
+
+    h += '<div class="field"><p class="label">What the log shows so far</p>';
+    if (!db.entries.length) {
+      h += '<p class="empty">Figures appear once you have entries.</p>';
+    } else {
+      var s = stats();
+      h += '<div class="stat"><span>Days logged</span><span>' + s.days + '</span></div>' +
+        '<div class="stat"><span>Pale (clay or pale yellow)</span><span>' + s.pale + ' of ' + s.total + ' \u00B7 ' + s.palePct + '%</span></div>' +
+        '<div class="stat"><span>Normal brown</span><span>' + s.normal + ' of ' + s.total + '</span></div>' +
+        '<div class="stat"><span>Greasy or floating</span><span>' + s.greasy + ' of ' + s.total + '</span></div>' +
+        '<div class="stat"><span>Days with pale stool and pain</span><span>' + s.paleAndPain + '</span></div>' +
+        '<div class="stat"><span>Days with dark urine and pale stool</span><span>' + s.paleAndUrine + '</span></div>' +
+        '<div class="stat"><span>Greasy after high-fat meals</span><span>' + s.greasyHighFat + ' of ' + s.highFat + '</span></div>' +
+        '<div class="stat"><span>Longest run without normal brown</span><span>' + s.longestAbnormal + (s.longestAbnormal === 1 ? ' day' : ' days') + '</span></div>';
+      if (s.lastClay) {
+        h += '<p class="flash" style="margin-top:14px">Most recent clay entry: <strong>' + prettyDate(s.lastClay.slice(0, 10)) +
+          '</strong>. Liver bloods drawn within a day or two of a pale stool are the ones that carry weight.</p>';
+      }
+    }
+    h += '</div>';
+
+    h += '<div class="field"><p class="label">Take it to the appointment</p>' +
+      '<p class="hint">Copy into Notes, or download and email it to yourself.</p><div class="stack">' +
+      '<button class="ghost" id="copysummary">Copy written summary</button>' +
+      '<button class="ghost" id="dlsummary">Download summary</button>' +
+      '<button class="ghost quiet" id="copycsv">Copy full table</button>' +
+      '<button class="ghost quiet" id="dlcsv">Download table (CSV)</button></div>' +
+      '<pre class="csv">' + esc(csv()) + '</pre></div>';
+
+    h += '<div class="field"><p class="label">Keep your data safe</p>' +
+      '<p class="hint">Entries live in this browser only. Clearing site data or private browsing will lose them, so keep a backup file in iCloud Drive.</p><div class="stack">' +
+      '<button class="ghost" id="backup">Save backup file</button>' +
+      '<button class="ghost quiet" id="restore">Restore from backup file</button>' +
+      '<button class="ghost risky" id="wipe">Erase everything</button></div>' +
+      (db.lastBackup ? '<p class="hint" style="margin-top:10px">Last backup ' + prettyDate(db.lastBackup.slice(0, 10)) + '.</p>' : '') +
+      (flash ? '<p class="flash' + (flash.alarm ? ' alarm' : '') + '">' + flash.text + '</p>' : '') +
+      '</div>';
+
+    return h + '</section>';
+  }
+
+  // ---------- events ----------
+
+  function wire() {
+    var app = document.getElementById('app');
+
+    app.querySelectorAll('[data-tab]').forEach(function (b) {
+      b.onclick = function () { tab = b.dataset.tab; flash = null; render(); };
+    });
+    app.querySelectorAll('[data-colour]').forEach(function (b) {
+      b.onclick = function () { syncDraft(); draft.colour = draft.colour === b.dataset.colour ? null : b.dataset.colour; render(); };
+    });
+    app.querySelectorAll('[data-bristol]').forEach(function (b) {
+      b.onclick = function () { syncDraft(); var n = +b.dataset.bristol; draft.bristol = draft.bristol === n ? null : n; render(); };
+    });
+    app.querySelectorAll('[data-fat]').forEach(function (b) {
+      b.onclick = function () { syncDraft(); draft.fat = draft.fat === b.dataset.fat ? null : b.dataset.fat; render(); };
+    });
+    app.querySelectorAll('[data-urine]').forEach(function (b) {
+      b.onclick = function () { syncDraft(); draft.urine = draft.urine === b.dataset.urine ? null : b.dataset.urine; render(); };
+    });
+    app.querySelectorAll('[data-texture]').forEach(function (b) {
+      b.onclick = function () { syncDraft(); toggle(draft.texture, b.dataset.texture); render(); };
+    });
+    app.querySelectorAll('[data-symptom]').forEach(function (b) {
+      b.onclick = function () { syncDraft(); toggle(draft.symptoms, b.dataset.symptom); render(); };
+    });
+
+    var save = app.querySelector('#save');
+    if (save) save.onclick = saveEntry;
+
+    app.querySelectorAll('[data-del]').forEach(function (b) {
+      b.onclick = function () {
+        db.entries = db.entries.filter(function (e) { return e.id !== b.dataset.del; });
+        persist(); render();
+      };
+    });
+
+    var aw = app.querySelector('#addweight');
+    if (aw) aw.onclick = function () {
+      var v = app.querySelector('#wval').value, d = app.querySelector('#wdate').value;
+      if (!v || !d) { flash = { text: 'Enter a weight and a date.' }; render(); return; }
+      db.weights = db.weights.filter(function (w) { return w.date !== d; });
+      db.weights.push({ date: d, value: v });
+      flash = { text: 'Weight added.' };
+      persist(); render();
+    };
+
+    bind('#copysummary', function () { copy(writtenSummary(), 'Summary'); });
+    bind('#copycsv', function () { copy(csv(), 'Table'); });
+    bind('#dlsummary', function () {
+      download('stool-log-summary-' + today() + '.txt', writtenSummary(), 'text/plain');
+      flash = { text: 'Summary downloaded. Check your Files app or Downloads folder.' }; render();
+    });
+    bind('#dlcsv', function () {
+      download('stool-log-' + today() + '.csv', csv(), 'text/csv');
+      flash = { text: 'Table downloaded.' }; render();
+    });
+    bind('#backup', function () {
+      db.lastBackup = new Date().toISOString();
+      persist();
+      download('stool-log-backup-' + today() + '.json', JSON.stringify(db), 'application/json');
+      flash = { text: 'Backup saved. Move it to iCloud Drive or email it to yourself so it survives this device.' };
+      render();
+    });
+    bind('#restore', function () { document.getElementById('restorefile').click(); });
+    bind('#wipe', function () {
+      if (!window.confirm('Erase every entry and weight? This cannot be undone.')) return;
+      db = { entries: [], weights: [], lastBackup: null };
+      persist();
+      flash = { alarm: true, text: 'All entries erased.' };
+      render();
+    });
+
+    function bind(sel, fn) { var el = app.querySelector(sel); if (el) el.onclick = fn; }
+  }
+
+  document.getElementById('restorefile').onchange = function (ev) {
+    var file = ev.target.files && ev.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      try {
+        var incoming = JSON.parse(reader.result);
+        if (!incoming || !Array.isArray(incoming.entries)) throw new Error('shape');
+        var seen = {};
+        db.entries.forEach(function (e) { seen[e.id] = 1; });
+        var added = 0;
+        incoming.entries.forEach(function (e) { if (e && e.id && !seen[e.id]) { db.entries.push(e); added++; } });
+        (incoming.weights || []).forEach(function (w) {
+          if (!w || !w.date) return;
+          db.weights = db.weights.filter(function (x) { return x.date !== w.date; });
+          db.weights.push(w);
+        });
+        persist();
+        flash = { text: added + (added === 1 ? ' entry' : ' entries') + ' merged in. Nothing already here was replaced.' };
+      } catch (e) {
+        flash = { alarm: true, text: 'That file could not be read as a backup. Pick the stool-log-backup JSON file.' };
+      }
+      ev.target.value = '';
+      render();
+    };
+    reader.onerror = function () {
+      flash = { alarm: true, text: 'The file could not be opened.' };
+      ev.target.value = '';
+      render();
+    };
+    reader.readAsText(file);
+  };
+
+  function syncDraft() {
+    var app = document.getElementById('app');
+    var w = app.querySelector('#when'), n = app.querySelector('#note');
+    if (w) draft.when = w.value;
+    if (n) draft.note = n.value;
+  }
+
+  function saveEntry() {
+    syncDraft();
+    if (!draft.colour) return;
+    db.entries.push({
+      id: String(Date.now()) + Math.random().toString(36).slice(2, 7),
+      ts: draft.when || localNow(),
+      colour: draft.colour,
+      bristol: draft.bristol,
+      texture: draft.texture.slice(),
+      fat: draft.fat,
+      urine: draft.urine,
+      symptoms: draft.symptoms.slice(),
+      note: draft.note.trim()
+    });
+    var wasClay = draft.colour === 'clay';
+    draft = newDraft();
+    persist();
+    flash = wasClay
+      ? { text: '<strong>Clay entry saved.</strong> If you can get liver bloods drawn in the next day or two, this is the window that matters.' }
+      : { text: 'Entry saved.' };
+    render();
+  }
+
+  load();
+  render();
+})();
+</script>
+</body>
+</html>
